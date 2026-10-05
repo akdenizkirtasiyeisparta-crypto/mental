@@ -370,26 +370,6 @@ class _HosGeldinEkraniState extends State<HosGeldinEkrani> {
         body: Sahne(
           arkaPlan: 'assets/images/hos_geldin.png',
           katmanlar: (context, w, h) => [
-            // GEÇİCİ TANI: ses durumunu gösterir ve Ses Testi'ne götürür
-            Positioned(
-              left: w * .01,
-              top: h * .02,
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SesTestSayfasi())),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'Ses Testi ▶  ${_sesDurumu.isEmpty ? "..." : _sesDurumu}',
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ),
-              ),
-            ),
             Positioned(
               left: w * .02,
               bottom: h * .03,
