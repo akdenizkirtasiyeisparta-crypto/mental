@@ -345,7 +345,8 @@ class _HosGeldinEkraniState extends State<HosGeldinEkrani> {
   Future<void> _zuzuKonussun() async {
     if (_konusuyor || !mounted) return;
     setState(() => _konusuyor = true);
-    await ZuzuSesServisi.instance.konus(Ses.hosGeldin);
+    await ZuzuSesServisi.instance.konus(
+        dosya: Ses.hosGeldin, metin: ZuzuMetin.hosGeldin);
     if (mounted) setState(() => _konusuyor = false);
   }
 
@@ -415,6 +416,13 @@ class _BilgiGirisiEkraniState extends State<BilgiGirisiEkrani> {
   final _adController = TextEditingController();
   int? _yas;
   String? _sinif;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) =>
+        ZuzuSesServisi.instance.konus(metin: ZuzuMetin.seniTaniyalim));
+  }
 
   @override
   void dispose() {
@@ -601,8 +609,8 @@ class _ProfilEkraniState extends State<ProfilEkrani> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-        (_) => ZuzuSesServisi.instance.konus(Ses.profil));
+    WidgetsBinding.instance.addPostFrameCallback((_) => ZuzuSesServisi.instance
+        .konus(metin: ZuzuMetin.profil(Oyuncu.instance.ad)));
   }
 
   @override
@@ -703,6 +711,19 @@ class AnaMenuEkrani extends StatefulWidget {
 }
 
 class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) =>
+        ZuzuSesServisi.instance.konus(metin: ZuzuMetin.anaMenu));
+  }
+
+  @override
+  void dispose() {
+    ZuzuSesServisi.instance.durdur();
+    super.dispose();
+  }
+
   // Görsel koordinatları (1670x942) -> oran
   static const double _gw = 1670, _gh = 942;
 
@@ -820,7 +841,8 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
 
             // Zuzu'ya dokununca konuşur
             _alan(w, h, 0, 470, 430, 470,
-                () => ZuzuSesServisi.instance.konus(Ses.hosGeldin),
+                () => ZuzuSesServisi.instance
+                    .konus(metin: ZuzuMetin.anaMenu),
                 ipucu: 'Zuzu'),
           ],
         ),

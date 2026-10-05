@@ -1,14 +1,27 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
-/// Zuzu'nun hazır ses dosyalarını çalar.
-/// Ses dosyalarını assets/sesler/ klasörüne koy. Adları farklıysa
-/// aşağıdaki [Ses] listesindeki dosya adlarını değiştirmen yeterli.
+/// Hazır ses dosyası adları (assets/sesler/ içinde).
+/// Dosya varsa o çalınır; yoksa aynı metin telefonun Türkçe sesiyle okunur.
 class Ses {
   static const hosGeldin = 'sesler/hos_geldin.mp3';
-  static const profil = 'sesler/profil.mp3';
   static const tikla = 'sesler/tikla.mp3';
   static const odul = 'sesler/odul.mp3';
+}
+
+/// Zuzu'nun okuduğu metinler.
+class ZuzuMetin {
+  static const hosGeldin =
+      'Merhaba! Online Mental Akademi\'ye hoş geldin! '
+      'Zuzu ile birlikte öğrenmek çok eğlenceli!';
+  static const seniTaniyalim =
+      'Seni tanıyalım! Adını yaz, yaşını ve sınıfını seç.';
+  static String profil(String ad) =>
+      'Profilin oluşturuldu $ad! Hadi birlikte başlayalım!';
+  static const anaMenu =
+      'Hangi adaya gitmek istersin? Bir adaya dokun ve oyuna başla!';
 }
 
 class ZuzuSesServisi {
@@ -17,34 +30,67 @@ class ZuzuSesServisi {
 
   final AudioPlayer _konusma = AudioPlayer();
   final AudioPlayer _efekt = AudioPlayer();
+  final FlutterTts _tts = FlutterTts();
+  bool _ttsHazir = false;
   bool sesAcik = true;
 
-  /// Zuzu'nun konuşması: bitene kadar bekler. Dosya yoksa sessizce geçer.
-  Future<void> konus(String dosya) async {
-    if (!sesAcik) return;
+  Future<void> _ttsHazirla() async {
+    if (_ttsHazir) return;
     try {
-      await _konusma.stop();
-      await _konusma.play(AssetSource(dosya));
-      await _konusma.onPlayerComplete.first
-          .timeout(const Duration(seconds: 30));
+      await _tts.setLanguage('tr-TR');
+      await _tts.setSpeechRate(0.45);
+      await _tts.setPitch(1.25); // biraz tiz, tavşan sesi gibi
+      await _tts.awaitSpeakCompletion(true);
+      _ttsHazir = true;
     } catch (e) {
-      debugPrint('Zuzu sesi çalınamadı ($dosya): $e');
+      debugPrint('Sesli okuma hazırlanamadı: $e');
     }
   }
 
-  /// Kısa efekt (tıklama, ödül). Beklemez.
+  Future<bool> _dosyaVar(String dosya) async {
+    try {
+      await rootBundle.load('assets/$dosya');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Zuzu konuşur. [dosya] varsa onu çalar, yoksa [metin]'i sesli okur.
+  Future<void> konus({String? dosya, required String metin}) async {
+    if (!sesAcik) return;
+    try {
+      await durdur();
+      if (dosya != null && await _dosyaVar(dosya)) {
+        await _konusma.play(AssetSource(dosya));
+        await _konusma.onPlayerComplete.first
+            .timeout(const Duration(seconds: 60));
+        return;
+      }
+      await _ttsHazirla();
+      await _tts.speak(metin);
+    } catch (e) {
+      debugPrint('Zuzu konuşamadı: $e');
+    }
+  }
+
+  /// Kısa efekt (tıklama, ödül). Dosya yoksa sessiz kalır.
   Future<void> efekt(String dosya) async {
     if (!sesAcik) return;
     try {
+      if (!await _dosyaVar(dosya)) return;
       await _efekt.stop();
       await _efekt.play(AssetSource(dosya));
     } catch (e) {
-      debugPrint('Efekt çalınamadı ($dosya): $e');
+      debugPrint('Efekt çalınamadı: $e');
     }
   }
 
   Future<void> durdur() async {
-    await _konusma.stop();
-    await _efekt.stop();
+    try {
+      await _konusma.stop();
+      await _efekt.stop();
+      await _tts.stop();
+    } catch (_) {}
   }
 }
