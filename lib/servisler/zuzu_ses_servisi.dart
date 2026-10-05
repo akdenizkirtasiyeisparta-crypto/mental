@@ -60,20 +60,26 @@ class ZuzuSesServisi {
   }
 
   /// Zuzu konuşur. [dosya] varsa onu çalar, yoksa [metin]'i sesli okur.
-  Future<void> konus({String? dosya, required String metin}) async {
-    if (!sesAcik) return;
+  /// Ne yaptığını yazıyla döndürür (tanı için).
+  Future<String> konus({String? dosya, required String metin}) async {
+    if (!sesAcik) return 'Ses ayarlardan kapalı';
     try {
       await durdur();
       if (dosya != null && await _dosyaVar(dosya)) {
+        await _konusma.setVolume(1.0);
         await _konusma.play(AssetSource(dosya));
         await _konusma.onPlayerComplete.first
             .timeout(const Duration(seconds: 60));
-        return;
+        return 'MP3 çalındı: $dosya';
       }
       await _ttsHazirla();
       await _tts.speak(metin);
+      return dosya == null
+          ? 'Telefon sesi okudu'
+          : 'MP3 PAKETTE YOK ($dosya), telefon sesi okudu';
     } catch (e) {
       debugPrint('Zuzu konuşamadı: $e');
+      return 'HATA: $e';
     }
   }
 

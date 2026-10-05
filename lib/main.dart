@@ -337,6 +337,7 @@ class HosGeldinEkrani extends StatefulWidget {
 
 class _HosGeldinEkraniState extends State<HosGeldinEkrani> {
   bool _konusuyor = false;
+  String _sesDurumu = '';
 
   @override
   void initState() {
@@ -347,9 +348,15 @@ class _HosGeldinEkraniState extends State<HosGeldinEkrani> {
   Future<void> _zuzuKonussun() async {
     if (_konusuyor || !mounted) return;
     setState(() => _konusuyor = true);
-    await ZuzuSesServisi.instance.konus(
+    final durum = await ZuzuSesServisi.instance.konus(
         dosya: Ses.hosGeldin, metin: ZuzuMetin.hosGeldin);
-    if (mounted) setState(() => _konusuyor = false);
+    debugPrint('SES DURUMU: $durum');
+    if (mounted) {
+      setState(() {
+        _konusuyor = false;
+        _sesDurumu = durum;
+      });
+    }
   }
 
   @override
@@ -363,6 +370,26 @@ class _HosGeldinEkraniState extends State<HosGeldinEkrani> {
         body: Sahne(
           arkaPlan: 'assets/images/hos_geldin.png',
           katmanlar: (context, w, h) => [
+            // GEÇİCİ TANI: ses durumunu gösterir ve Ses Testi'ne götürür
+            Positioned(
+              left: w * .01,
+              top: h * .02,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SesTestSayfasi())),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Ses Testi ▶  ${_sesDurumu.isEmpty ? "..." : _sesDurumu}',
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+              ),
+            ),
             Positioned(
               left: w * .02,
               bottom: h * .03,
