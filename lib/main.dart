@@ -99,29 +99,40 @@ const rozetListesi = [
 ];
 
 // ---------------------------------------------------------------------------
-// SAHNE: görseli 16:9 güvenli alana oturtur, kenarlara bulanık dolgu koyar
+// SAHNE: görseli kendi gerçek oranında ekrana sığdırır (bozmadan), artan
+// kenarları aynı görselin bulanık hâliyle doldurur. Yazı/buton konumları
+// görselin kendisine göre oran olarak verilir.
+//
+// kGorselOrani   : acilis, hos_geldin, seni_taniyalim, profil görselleri (2000x900)
+// kAnaMenuOrani  : ana_menu görseli (1670x942)
+// Görsellerin boyutu farklıysa buradaki sayıları değiştir.
 // ---------------------------------------------------------------------------
-const double kSahneOrani = 16 / 9;
-const double kGorselOrani = 1670 / 942;
+const double kGorselOrani = 2000 / 900;
+const double kAnaMenuOrani = 1670 / 942;
 
 class Sahne extends StatelessWidget {
   final String arkaPlan;
+  final double gorselOrani;
   final List<Widget> Function(BuildContext context, double w, double h)
       katmanlar;
 
-  const Sahne({super.key, required this.arkaPlan, required this.katmanlar});
+  const Sahne({
+    super.key,
+    required this.arkaPlan,
+    required this.katmanlar,
+    this.gorselOrani = kGorselOrani,
+  });
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (context, c) {
           final sw = c.maxWidth, sh = c.maxHeight;
-          double bw = sw, bh = sw / kSahneOrani;
+          double bw = sw, bh = sw / gorselOrani;
           if (bh > sh) {
             bh = sh;
-            bw = sh * kSahneOrani;
+            bw = sh * gorselOrani;
           }
           final left = (sw - bw) / 2, top = (sh - bh) / 2;
-          final gw = bh * kGorselOrani;
 
           return ColoredBox(
             color: const Color(0xFF18BFF2),
@@ -137,9 +148,9 @@ class Sahne extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  left: (sw - gw) / 2,
+                  left: left,
                   top: top,
-                  width: gw,
+                  width: bw,
                   height: bh,
                   child: Image.asset(
                     arkaPlan,
@@ -731,6 +742,7 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
   Widget build(BuildContext context) => Scaffold(
         body: Sahne(
           arkaPlan: 'assets/images/ana_menu.png',
+          gorselOrani: kAnaMenuOrani,
           katmanlar: (context, w, h) => [
             // Boş isim kutusuna çocuğun adı
             Positioned(
@@ -834,6 +846,7 @@ class TemaSayfa extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         body: Sahne(
           arkaPlan: 'assets/images/ana_menu.png',
+          gorselOrani: kAnaMenuOrani,
           katmanlar: (context, w, h) => [
             // Görseldeki menüyü örten yarı saydam kum rengi tahta panel
             Positioned.fill(
