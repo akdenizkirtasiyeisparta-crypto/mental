@@ -1,7 +1,9 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 import 'servisler/zuzu_ses_servisi.dart';
 
@@ -1435,20 +1437,180 @@ class _AyarlarSayfasiState extends State<AyarlarSayfasi> {
         baslik: 'Ayarlar',
         ikon: Icons.settings_rounded,
         icerik: (w, h) => Center(
-          child: Kart(
-            child: SwitchListTile(
-              value: ZuzuSesServisi.instance.sesAcik,
-              activeThumbColor: kMor,
-              secondary: const Icon(Icons.volume_up_rounded, size: 40, color: kMor),
-              title: const Text('Zuzu\'nun sesi',
-                  style: TextStyle(
-                      fontSize: 26, fontWeight: FontWeight.w900, color: kKahve)),
-              onChanged: (v) {
-                setState(() => ZuzuSesServisi.instance.sesAcik = v);
-                if (!v) ZuzuSesServisi.instance.durdur();
-              },
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Kart(
+                child: SwitchListTile(
+                  value: ZuzuSesServisi.instance.sesAcik,
+                  activeThumbColor: kMor,
+                  secondary:
+                      const Icon(Icons.volume_up_rounded, size: 40, color: kMor),
+                  title: const Text('Zuzu\'nun sesi',
+                      style: TextStyle(
+                          fontSize: 26, fontWeight: FontWeight.w900, color: kKahve)),
+                  onChanged: (v) {
+                    setState(() => ZuzuSesServisi.instance.sesAcik = v);
+                    if (!v) ZuzuSesServisi.instance.durdur();
+                  },
+                ),
+              ),
+              const SizedBox(height: 14),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SesTestSayfasi())),
+                icon: const Icon(Icons.bug_report_rounded),
+                label: const Text('Ses Testi'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kMor,
+                  foregroundColor: Colors.white,
+                  textStyle:
+                      const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
           ),
+        ),
+      );
+}
+
+// ===========================================================================
+// SES TESTİ: uygulamanın bulduğu ses dosyalarını listeler ve çalmayı dener
+// ===========================================================================
+class SesTestSayfasi extends StatefulWidget {
+  const SesTestSayfasi({super.key});
+  @override
+  State<SesTestSayfasi> createState() => _SesTestSayfasiState();
+}
+
+class _SesTestSayfasiState extends State<SesTestSayfasi> {
+  final AudioPlayer _oynatici = AudioPlayer();
+  final FlutterTts _tts = FlutterTts();
+  List<String>? _dosyalar;
+  final Map<String, String> _sonuc = {};
+  String _ttsSonuc = 'Henüz denenmedi';
+  String _hata = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _yukle();
+  }
+
+  @override
+  void dispose() {
+    _oynatici.dispose();
+    super.dispose();
+  }
+
+  Future<void> _yukle() async {
+    try {
+      final m = await AssetManifest.loadFromAssetBundle(rootBundle);
+      final liste = m
+          .listAssets()
+          .where((a) => RegExp(r'\.(mp3|wav|ogg|m4a|aac)$', caseSensitive: false)
+              .hasMatch(a))
+          .toList();
+      setState(() => _dosyalar = liste);
+    } catch (e) {
+      setState(() {
+        _dosyalar = [];
+        _hata = 'Dosya listesi okunamadı: $e';
+      });
+    }
+  }
+
+  Future<void> _cal(String yol) async {
+    setState(() => _sonuc[yol] = 'Deneniyor...');
+    try {
+      await rootBundle.load(yol);
+    } catch (e) {
+      setState(() => _sonuc[yol] = 'HATA: dosya pakette yok ($e)');
+      return;
+    }
+    try {
+      await _oynatici.stop();
+      await _oynatici.setVolume(1.0);
+      await _oynatici.play(AssetSource(yol.replaceFirst('assets/', '')));
+      setState(() => _sonuc[yol] = 'Çalmaya başladı. Ses duydun mu?');
+    } catch (e) {
+      setState(() => _sonuc[yol] = 'HATA: çalınamadı ($e)');
+    }
+  }
+
+  Future<void> _ttsDene() async {
+    setState(() => _ttsSonuc = 'Deneniyor...');
+    try {
+      final diller = await _tts.getLanguages;
+      final tr = await _tts.isLanguageAvailable('tr-TR');
+      await _tts.setLanguage('tr-TR');
+      await _tts.setVolume(1.0);
+      await _tts.speak('Merhaba, ben Zuzu. Beni duyuyor musun?');
+      setState(() => _ttsSonuc =
+          'Türkçe var mı: $tr\nDil sayısı: ${(diller as List).length}\n'
+          'Konuşma başlatıldı. Ses duydun mu?');
+    } catch (e) {
+      setState(() => _ttsSonuc = 'HATA: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => TemaSayfa(
+        baslik: 'Ses Testi',
+        ikon: Icons.bug_report_rounded,
+        icerik: (w, h) => ListView(
+          children: [
+            const Text(
+              'Önce telefonun/emülatörün MEDYA SESİNİ aç. Sonra aşağıdaki '
+              'düğmelere sırayla bas ve ne yazdığını bana bildir.',
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.w700, color: kKahve),
+            ),
+            const SizedBox(height: 10),
+            Kart(
+              child: Row(children: [
+                Expanded(
+                  child: Text('Sesli okuma (TTS)\n$_ttsSonuc',
+                      style: const TextStyle(
+                          fontSize: 17, fontWeight: FontWeight.w700)),
+                ),
+                ElevatedButton(
+                    onPressed: _ttsDene, child: const Text('Okut')),
+              ]),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              _dosyalar == null
+                  ? 'Dosyalar aranıyor...'
+                  : 'Pakette bulunan ses dosyaları: ${_dosyalar!.length}'
+                      '${_dosyalar!.isEmpty ? "  (HİÇ YOK! pubspec.yaml assets bölümünü kontrol et)" : ""}',
+              style: const TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.w900, color: kMavi),
+            ),
+            if (_hata.isNotEmpty) Text(_hata),
+            for (final d in _dosyalar ?? <String>[])
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Kart(
+                  child: Row(children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(d,
+                              style: const TextStyle(
+                                  fontSize: 17, fontWeight: FontWeight.w900)),
+                          Text(_sonuc[d] ?? 'Denenmedi',
+                              style: const TextStyle(fontSize: 16)),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                        onPressed: () => _cal(d), child: const Text('Çal')),
+                  ]),
+                ),
+              ),
+          ],
         ),
       );
 }
