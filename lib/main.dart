@@ -106,12 +106,12 @@ const rozetListesi = [
 // görselin kendisine göre oran olarak verilir.
 //
 // kGorselOrani   : acilis, hos_geldin, seni_taniyalim, profil görselleri (2000x900)
-// kAnaMenuOrani  : ana_menu görseli (1670x942)
+// kAnaMenuOrani  : ana_menu görseli (2000x900)
 // Görsellerin boyutu farklıysa buradaki sayıları değiştir.
 // ---------------------------------------------------------------------------
 const double kGorselOrani = 2000 / 900;
-const double kGorselGenislik = 1670;
-const double kGorselYukseklik = 942;
+const double kGorselGenislik = 2000;
+const double kGorselYukseklik = 900;
 const double kAnaMenuOrani = kGorselGenislik / kGorselYukseklik;
 
 class Sahne extends StatelessWidget {
@@ -418,6 +418,19 @@ class BilgiGirisiEkrani extends StatefulWidget {
 }
 
 class _BilgiGirisiEkraniState extends State<BilgiGirisiEkrani> {
+  static const _yaslar = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+  static const _siniflar = [
+    'Okul öncesi',
+    '1. sınıf',
+    '2. sınıf',
+    '3. sınıf',
+    '4. sınıf',
+    '5. sınıf',
+    '6. sınıf',
+    '7. sınıf',
+    '8. sınıf',
+  ];
+
   final _adController = TextEditingController();
   int? _yas;
   String? _sinif;
@@ -425,14 +438,14 @@ class _BilgiGirisiEkraniState extends State<BilgiGirisiEkrani> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) =>
-        ZuzuSesServisi.instance.konus(
-            dosya: Ses.seniTaniyalim, metin: ZuzuMetin.seniTaniyalim));
+    WidgetsBinding.instance.addPostFrameCallback((_) => ZuzuSesServisi.instance
+        .konus(dosya: Ses.seniTaniyalim, metin: ZuzuMetin.seniTaniyalim));
   }
 
   @override
   void dispose() {
     _adController.dispose();
+    ZuzuSesServisi.instance.durdur();
     super.dispose();
   }
 
@@ -441,7 +454,7 @@ class _BilgiGirisiEkraniState extends State<BilgiGirisiEkrani> {
     final ad = _adController.text.trim();
     if (ad.isEmpty || _yas == null || _sinif == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen adını, yaşını ve sınıfını seç.')),
+        const SnackBar(content: Text('Lütfen adını yaz, yaşını ve sınıfını seç.')),
       );
       return;
     }
@@ -452,34 +465,72 @@ class _BilgiGirisiEkraniState extends State<BilgiGirisiEkrani> {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfilEkrani()));
   }
 
-  Widget _etiket(String yazi) => Padding(
-        padding: const EdgeInsets.only(left: 8, bottom: 4),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(yazi,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: kKahve)),
-        ),
+  Widget _etiket(IconData ikon, Color renk, String yazi) => SizedBox(
+        width: 190,
+        child: Row(children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: renk,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: const [
+                BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+              ],
+            ),
+            child: Icon(ikon, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 10),
+          Text(yazi,
+              style: const TextStyle(
+                  fontSize: 26, fontWeight: FontWeight.w900, color: kKahve)),
+        ]),
       );
 
-  InputDecoration _alan({Widget? ikon, String? ipucu}) => InputDecoration(
-        hintText: ipucu,
-        hintStyle: const TextStyle(fontSize: 22, color: Colors.black38),
-        prefixIcon: ikon,
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: kCerceve, width: 3),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: kMor, width: 3),
+  Widget _chip(String yazi, bool secili, VoidCallback onTap, {double genislik = 64}) =>
+      Basilabilir(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: genislik,
+          height: 54,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            gradient: secili
+                ? const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFFB36CF5), Color(0xFF7431B5)],
+                  )
+                : const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.white, Color(0xFFFFEFD2)],
+                  ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+                color: secili ? Colors.white : kCerceve, width: secili ? 3 : 2.5),
+            boxShadow: [
+              BoxShadow(
+                  color: secili ? const Color(0x669C4DE0) : Colors.black12,
+                  blurRadius: secili ? 10 : 4,
+                  offset: const Offset(0, 3)),
+            ],
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Text(yazi,
+                  style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: secili ? Colors.white : kKahve)),
+            ),
+          ),
         ),
       );
-
-  static const _yaziStili =
-      TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: kKahve);
 
   @override
   Widget build(BuildContext context) {
@@ -498,94 +549,127 @@ class _BilgiGirisiEkraniState extends State<BilgiGirisiEkrani> {
           child: Sahne(
             arkaPlan: 'assets/images/seni_taniyalim.png',
             katmanlar: (context, w, h) => [
+              // Tahtanın krem iç alanı (görselde x:240-1320, y:320-705)
               Positioned(
                 left: w * .142,
                 top: h * .365,
-                width: w * .500,
-                height: h * .40,
+                width: w * .50,
+                height: h * .415,
                 child: FittedBox(
                   fit: BoxFit.contain,
                   child: SizedBox(
-                    width: 780,
+                    width: 1040,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _etiket('Adın ve soyadın'),
-                        TextField(
-                          controller: _adController,
-                          textCapitalization: TextCapitalization.words,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => FocusScope.of(context).unfocus(),
-                          style: _yaziStili,
-                          cursorColor: kMor,
-                          decoration: _alan(
-                            ipucu: 'Adını yaz',
-                            ikon: const Icon(Icons.person_rounded, size: 30, color: kMor),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(children: [
-                                _etiket('Yaşın'),
-                                DropdownButtonFormField<int>(
-                                  initialValue: _yas,
-                                  isExpanded: true,
-                                  style: _yaziStili,
-                                  dropdownColor: Colors.white,
-                                  borderRadius: BorderRadius.circular(18),
-                                  decoration: _alan(ipucu: 'Seç'),
-                                  items: List.generate(13, (i) => i + 4)
-                                      .map((v) => DropdownMenuItem(value: v, child: Text('$v yaş')))
-                                      .toList(),
-                                  onChanged: (v) => setState(() => _yas = v),
+                        // Ad
+                        Row(children: [
+                          _etiket(Icons.person_rounded, const Color(0xFFE040B8), 'Adın'),
+                          Expanded(
+                            child: SizedBox(
+                              height: 60,
+                              child: TextField(
+                                controller: _adController,
+                                textCapitalization: TextCapitalization.words,
+                                textInputAction: TextInputAction.done,
+                                onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                                style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w800,
+                                    color: kKahve),
+                                cursorColor: kMor,
+                                decoration: InputDecoration(
+                                  hintText: 'Adını ve soyadını yaz',
+                                  hintStyle: const TextStyle(
+                                      fontSize: 24, color: Colors.black38),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 8),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                    borderSide:
+                                        const BorderSide(color: kCerceve, width: 3),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                    borderSide:
+                                        const BorderSide(color: kMor, width: 3.5),
+                                  ),
                                 ),
-                              ]),
-                            ),
-                            const SizedBox(width: 24),
-                            Expanded(
-                              child: Column(children: [
-                                _etiket('Sınıfın'),
-                                DropdownButtonFormField<String>(
-                                  initialValue: _sinif,
-                                  isExpanded: true,
-                                  style: _yaziStili,
-                                  dropdownColor: Colors.white,
-                                  borderRadius: BorderRadius.circular(18),
-                                  decoration: _alan(ipucu: 'Seç'),
-                                  items: const [
-                                    'Okul öncesi',
-                                    '1. sınıf',
-                                    '2. sınıf',
-                                    '3. sınıf',
-                                    '4. sınıf',
-                                  ].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                                  onChanged: (v) => setState(() => _sinif = v),
-                                ),
-                              ]),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: 380,
-                          height: 62,
-                          child: ElevatedButton.icon(
-                            onPressed: _devamEt,
-                            icon: const Icon(Icons.arrow_forward_rounded, size: 30),
-                            label: const Text('Profilimi Oluştur'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: kMor,
-                              foregroundColor: Colors.white,
-                              elevation: 6,
-                              textStyle:
-                                  const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(31),
-                                side: const BorderSide(color: Colors.white, width: 3),
                               ),
+                            ),
+                          ),
+                        ]),
+                        const SizedBox(height: 14),
+                        // Yaş
+                        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                          _etiket(Icons.cake_rounded, const Color(0xFFFF8A00), 'Yaşın'),
+                          Expanded(
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                for (final y in _yaslar)
+                                  _chip('$y', _yas == y, () => setState(() => _yas = y)),
+                              ],
+                            ),
+                          ),
+                        ]),
+                        const SizedBox(height: 14),
+                        // Sınıf
+                        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                          _etiket(Icons.school_rounded, const Color(0xFF1E88E5), 'Sınıfın'),
+                          Expanded(
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                for (final k in _siniflar)
+                                  _chip(
+                                    k == 'Okul öncesi' ? k : k.substring(0, 1),
+                                    _sinif == k,
+                                    () => setState(() => _sinif = k),
+                                    genislik: k == 'Okul öncesi' ? 170 : 64,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ]),
+                        const SizedBox(height: 18),
+                        Basilabilir(
+                          onTap: _devamEt,
+                          child: Container(
+                            width: 420,
+                            height: 66,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Color(0xFFA855F0), Color(0xFF7431B5)],
+                              ),
+                              borderRadius: BorderRadius.circular(33),
+                              border: Border.all(color: Colors.white, width: 3.5),
+                              boxShadow: const [
+                                BoxShadow(
+                                    color: Colors.black38,
+                                    blurRadius: 8,
+                                    offset: Offset(0, 4)),
+                              ],
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('Profilimi Oluştur',
+                                    style: TextStyle(
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white)),
+                                SizedBox(width: 10),
+                                Icon(Icons.arrow_forward_rounded,
+                                    size: 36, color: Colors.white),
+                              ],
                             ),
                           ),
                         ),
@@ -779,15 +863,15 @@ class _AdaBilgi {
 
 const _adalar = [
   _AdaBilgi('DİKKAT', 'ADASI', Colors.white, Color(0xFF7A2E12),
-      Rect.fromLTWH(215, 478, 205, 78), Rect.fromLTWH(140, 330, 330, 270)),
+      Rect.fromLTWH(410, 458, 196, 74), Rect.fromLTWH(345, 315, 320, 290)),
   _AdaBilgi('ZUZU', 'ADASI', Color(0xFFFF4FC3), Colors.white,
-      Rect.fromLTWH(532, 504, 186, 84), Rect.fromLTWH(475, 330, 290, 310)),
+      Rect.fromLTWH(708, 482, 188, 80), Rect.fromLTWH(655, 320, 275, 290)),
   _AdaBilgi('MATEMATİK', 'ADASI', Color(0xFF1E5BE0), Colors.white,
-      Rect.fromLTWH(810, 528, 190, 92), Rect.fromLTWH(760, 372, 280, 293)),
+      Rect.fromLTWH(972, 508, 182, 84), Rect.fromLTWH(925, 355, 270, 290)),
   _AdaBilgi('MANTIK', 'ADASI', Colors.white, Color(0xFF8A4A10),
-      Rect.fromLTWH(1088, 524, 188, 78), Rect.fromLTWH(1035, 330, 285, 315)),
+      Rect.fromLTWH(1240, 496, 180, 76), Rect.fromLTWH(1190, 350, 275, 255)),
   _AdaBilgi('HIZ', 'ADASI', Color(0xFF3F4DE0), Colors.white,
-      Rect.fromLTWH(1388, 482, 186, 78), Rect.fromLTWH(1310, 330, 325, 270)),
+      Rect.fromLTWH(1528, 462, 176, 74), Rect.fromLTWH(1450, 315, 310, 265)),
 ];
 
 class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
@@ -840,7 +924,7 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
               _px(
                 w,
                 h,
-                const Rect.fromLTWH(630, 92, 430, 160),
+                const Rect.fromLTWH(795, 88, 430, 150),
                 IgnorePointer(
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
@@ -919,14 +1003,14 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
               Positioned(
                 left: -w * .012,
                 bottom: -h * .02,
-                height: h * .53,
+                height: h * .50,
                 child: Basilabilir(
                   ses: false,
                   onTap: () => ZuzuSesServisi.instance
                       .konus(dosya: Ses.anaMenu, metin: ZuzuMetin.anaMenu),
                   child: Image.asset(
                     'assets/images/zuzu.png',
-                    height: h * .53,
+                    height: h * .50,
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                   ),
@@ -936,17 +1020,17 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
               // --- Üst çubuk ---
               _isimKutusu(w, h, u),
               _puanKutusu(w, h, u),
-              _yuvarlakDugme(w, h, u, 1459, Icons.notifications_rounded,
+              _yuvarlakDugme(w, h, u, 1768, Icons.notifications_rounded,
                   () => _git(const BildirimSayfasi())),
-              _yuvarlakDugme(w, h, u, 1562, Icons.settings_rounded,
+              _yuvarlakDugme(w, h, u, 1868, Icons.settings_rounded,
                   () => _git(const AyarlarSayfasi())),
 
               // --- Alt butonlar (iskele üzerinde) ---
-              _altDugme(w, h, u, 472, 'Başarılarım', Icons.emoji_events_rounded,
+              _altDugme(w, h, u, 558, 'Başarılarım', Icons.emoji_events_rounded,
                   const Color(0xFFFFB300), () => _git(const BasarilarimSayfasi())),
-              _altDugme(w, h, u, 772, 'Görevler', Icons.assignment_rounded,
+              _altDugme(w, h, u, 868, 'Görevler', Icons.assignment_rounded,
                   const Color(0xFFFF8A00), () => _git(const GorevlerSayfasi())),
-              _altDugme(w, h, u, 1073, 'Rozetler', Icons.shield_rounded,
+              _altDugme(w, h, u, 1178, 'Rozetler', Icons.shield_rounded,
                   const Color(0xFFFF9800), () => _git(const RozetlerSayfasi()),
                   yildiz: true),
             ];
@@ -1026,7 +1110,7 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
   Widget _puanKutusu(double w, double h, double u) => _px(
         w,
         h,
-        const Rect.fromLTWH(1256, 24, 190, 86),
+        const Rect.fromLTWH(1535, 24, 205, 86),
         Stack(
           clipBehavior: Clip.none,
           children: [
@@ -1118,7 +1202,7 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
       _px(
         w,
         h,
-        Rect.fromLTWH(x, 762, 283, 92),
+        Rect.fromLTWH(x, 748, 290, 92),
         Basilabilir(
           onTap: onTap,
           child: Container(
