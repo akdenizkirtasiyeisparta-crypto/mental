@@ -423,7 +423,8 @@ class _BilgiGirisiEkraniState extends State<BilgiGirisiEkrani> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) =>
-        ZuzuSesServisi.instance.konus(metin: ZuzuMetin.seniTaniyalim));
+        ZuzuSesServisi.instance.konus(
+            dosya: Ses.seniTaniyalim, metin: ZuzuMetin.seniTaniyalim));
   }
 
   @override
@@ -612,7 +613,8 @@ class _ProfilEkraniState extends State<ProfilEkrani> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => ZuzuSesServisi.instance
-        .konus(metin: ZuzuMetin.profil(Oyuncu.instance.ad)));
+        .konus(
+        dosya: Ses.profil, metin: ZuzuMetin.profil(Oyuncu.instance.ad)));
   }
 
   @override
@@ -717,7 +719,7 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) =>
-        ZuzuSesServisi.instance.konus(metin: ZuzuMetin.anaMenu));
+        ZuzuSesServisi.instance.konus(dosya: Ses.anaMenu, metin: ZuzuMetin.anaMenu));
   }
 
   @override
@@ -844,7 +846,7 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
             // Zuzu'ya dokununca konuşur
             _alan(w, h, 0, 470, 430, 470,
                 () => ZuzuSesServisi.instance
-                    .konus(metin: ZuzuMetin.anaMenu),
+                    .konus(dosya: Ses.anaMenu, metin: ZuzuMetin.anaMenu),
                 ipucu: 'Zuzu'),
           ],
         ),

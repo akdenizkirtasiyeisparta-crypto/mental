@@ -6,7 +6,10 @@ import 'package:flutter_tts/flutter_tts.dart';
 /// Hazır ses dosyası adları (assets/audio/ içinde).
 /// Dosya varsa o çalınır; yoksa aynı metin telefonun Türkçe sesiyle okunur.
 class Ses {
-  static const hosGeldin = 'audio/zuzuses.mp3';
+  static const hosGeldin = 'audio/hos_geldin.mp3';
+  static const seniTaniyalim = 'audio/seni_taniyalim.mp3';
+  static const profil = 'audio/profil.mp3';
+  static const anaMenu = 'audio/ana_menu.mp3';
   static const tikla = 'audio/tikla.mp3';
   static const odul = 'audio/odul.mp3';
 }
