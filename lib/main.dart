@@ -357,7 +357,6 @@ class _HosGeldinEkraniState extends State<HosGeldinEkrani> {
 
   @override
   void dispose() {
-    ZuzuSesServisi.instance.durdur();
     super.dispose();
   }
 
@@ -445,7 +444,6 @@ class _BilgiGirisiEkraniState extends State<BilgiGirisiEkrani> {
   @override
   void dispose() {
     _adController.dispose();
-    ZuzuSesServisi.instance.durdur();
     super.dispose();
   }
 
@@ -706,7 +704,6 @@ class _ProfilEkraniState extends State<ProfilEkrani> {
 
   @override
   void dispose() {
-    ZuzuSesServisi.instance.durdur();
     super.dispose();
   }
 
@@ -863,15 +860,15 @@ class _AdaBilgi {
 
 const _adalar = [
   _AdaBilgi('DİKKAT', 'ADASI', Colors.white, Color(0xFF7A2E12),
-      Rect.fromLTWH(410, 458, 196, 74), Rect.fromLTWH(345, 315, 320, 290)),
+      Rect.fromLTWH(305, 542, 210, 72), Rect.fromLTWH(222, 388, 343, 262)),
   _AdaBilgi('ZUZU', 'ADASI', Color(0xFFFF4FC3), Colors.white,
-      Rect.fromLTWH(708, 482, 188, 80), Rect.fromLTWH(655, 320, 275, 290)),
+      Rect.fromLTWH(625, 554, 202, 74), Rect.fromLTWH(565, 380, 305, 295)),
   _AdaBilgi('MATEMATİK', 'ADASI', Color(0xFF1E5BE0), Colors.white,
-      Rect.fromLTWH(972, 508, 182, 84), Rect.fromLTWH(925, 355, 270, 290)),
+      Rect.fromLTWH(935, 570, 196, 80), Rect.fromLTWH(870, 405, 315, 285)),
   _AdaBilgi('MANTIK', 'ADASI', Colors.white, Color(0xFF8A4A10),
-      Rect.fromLTWH(1240, 496, 180, 76), Rect.fromLTWH(1190, 350, 275, 255)),
+      Rect.fromLTWH(1250, 568, 196, 68), Rect.fromLTWH(1180, 405, 320, 270)),
   _AdaBilgi('HIZ', 'ADASI', Color(0xFF3F4DE0), Colors.white,
-      Rect.fromLTWH(1528, 462, 176, 74), Rect.fromLTWH(1450, 315, 310, 265)),
+      Rect.fromLTWH(1585, 550, 196, 72), Rect.fromLTWH(1500, 388, 350, 272)),
 ];
 
 class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
@@ -886,7 +883,6 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
 
   @override
   void dispose() {
-    ZuzuSesServisi.instance.durdur();
     super.dispose();
   }
 
@@ -924,7 +920,7 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
               _px(
                 w,
                 h,
-                const Rect.fromLTWH(795, 88, 430, 150),
+                const Rect.fromLTWH(790, 118, 430, 148),
                 IgnorePointer(
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
@@ -1001,16 +997,16 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
 
               // --- Zuzu (sol alt) ---
               Positioned(
-                left: -w * .012,
+                left: -w * .02,
                 bottom: -h * .02,
-                height: h * .50,
+                height: h * .42,
                 child: Basilabilir(
                   ses: false,
                   onTap: () => ZuzuSesServisi.instance
                       .konus(dosya: Ses.anaMenu, metin: ZuzuMetin.anaMenu),
                   child: Image.asset(
                     'assets/images/zuzu.png',
-                    height: h * .50,
+                    height: h * .42,
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                   ),
@@ -1202,7 +1198,7 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
       _px(
         w,
         h,
-        Rect.fromLTWH(x, 748, 290, 92),
+        Rect.fromLTWH(x, 795, 290, 88),
         Basilabilir(
           onTap: onTap,
           child: Container(
