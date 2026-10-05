@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -107,11 +106,13 @@ const rozetListesi = [
 // görselin kendisine göre oran olarak verilir.
 //
 // kGorselOrani   : acilis, hos_geldin, seni_taniyalim, profil görselleri (2000x900)
-// kAnaMenuOrani  : ana_menu görseli (2000x900)
+// kAnaMenuOrani  : ana_menu görseli (1670x942)
 // Görsellerin boyutu farklıysa buradaki sayıları değiştir.
 // ---------------------------------------------------------------------------
 const double kGorselOrani = 2000 / 900;
-const double kAnaMenuOrani = 2000 / 900;
+const double kGorselGenislik = 1670;
+const double kGorselYukseklik = 942;
+const double kAnaMenuOrani = kGorselGenislik / kGorselYukseklik;
 
 class Sahne extends StatelessWidget {
   final String arkaPlan;
@@ -766,44 +767,41 @@ class AnaMenuEkrani extends StatefulWidget {
   State<AnaMenuEkrani> createState() => _AnaMenuEkraniState();
 }
 
+/// Görseldeki ada tabelaları ve dokunma alanları (1670x942 piksel koordinatı).
 class _AdaBilgi {
-  final double cx, ust, faz;
-  final Color renk, yaziDolgu, yaziKontur;
   final String baslik, alt;
-  final _Simge simge;
-  const _AdaBilgi(this.cx, this.ust, this.faz, this.renk, this.baslik, this.alt,
-      this.simge, this.yaziDolgu, this.yaziKontur);
+  final Color yaziDolgu, yaziKontur;
+  final Rect tabela; // yazının yazılacağı boş ahşap tabela
+  final Rect alan; // dokunma alanı (tüm ada)
+  const _AdaBilgi(this.baslik, this.alt, this.yaziDolgu, this.yaziKontur,
+      this.tabela, this.alan);
 }
 
 const _adalar = [
-  _AdaBilgi(.200, .320, 0.0, Color(0xFFE53935), 'DİKKAT', 'ADASI',
-      _Simge.hedef, Colors.white, Color(0xFF7A2E12)),
-  _AdaBilgi(.355, .345, .2, Color(0xFFE040B8), 'ZUZU', 'ADASI', _Simge.zuzu,
-      Color(0xFFFF4FC3), Colors.white),
-  _AdaBilgi(.510, .370, .4, Color(0xFF1E88E5), 'MATEMATİK', 'ADASI',
-      _Simge.matematik, Color(0xFF1E5BE0), Colors.white),
-  _AdaBilgi(.665, .345, .6, Color(0xFFFFB300), 'MANTIK', 'ADASI',
-      _Simge.yapboz, Colors.white, Color(0xFF8A4A10)),
-  _AdaBilgi(.820, .320, .8, Color(0xFF8E3FE0), 'HIZ', 'ADASI', _Simge.simsek,
-      Color(0xFF3F4DE0), Colors.white),
+  _AdaBilgi('DİKKAT', 'ADASI', Colors.white, Color(0xFF7A2E12),
+      Rect.fromLTWH(215, 478, 205, 78), Rect.fromLTWH(140, 330, 330, 270)),
+  _AdaBilgi('ZUZU', 'ADASI', Color(0xFFFF4FC3), Colors.white,
+      Rect.fromLTWH(532, 504, 186, 84), Rect.fromLTWH(475, 330, 290, 310)),
+  _AdaBilgi('MATEMATİK', 'ADASI', Color(0xFF1E5BE0), Colors.white,
+      Rect.fromLTWH(810, 528, 190, 92), Rect.fromLTWH(760, 372, 280, 293)),
+  _AdaBilgi('MANTIK', 'ADASI', Colors.white, Color(0xFF8A4A10),
+      Rect.fromLTWH(1088, 524, 188, 78), Rect.fromLTWH(1035, 330, 285, 315)),
+  _AdaBilgi('HIZ', 'ADASI', Color(0xFF3F4DE0), Colors.white,
+      Rect.fromLTWH(1388, 482, 186, 78), Rect.fromLTWH(1310, 330, 325, 270)),
 ];
 
-class _AnaMenuEkraniState extends State<AnaMenuEkrani>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _dalga;
+class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
+  static const double _gw = kGorselGenislik, _gh = kGorselYukseklik;
 
   @override
   void initState() {
     super.initState();
-    _dalga = AnimationController(vsync: this, duration: const Duration(seconds: 4))
-      ..repeat();
     WidgetsBinding.instance.addPostFrameCallback((_) => ZuzuSesServisi.instance
         .konus(dosya: Ses.anaMenu, metin: ZuzuMetin.anaMenu));
   }
 
   @override
   void dispose() {
-    _dalga.dispose();
     ZuzuSesServisi.instance.durdur();
     super.dispose();
   }
@@ -821,309 +819,171 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani>
     );
   }
 
+  /// Görsel pikseline göre konumlandırma.
+  Widget _px(double w, double h, Rect r, Widget child) => Positioned(
+        left: w * r.left / _gw,
+        top: h * r.top / _gh,
+        width: w * r.width / _gw,
+        height: h * r.height / _gh,
+        child: child,
+      );
+
   @override
   Widget build(BuildContext context) => Scaffold(
         body: Sahne(
           arkaPlan: 'assets/images/ana_menu.png',
           gorselOrani: kAnaMenuOrani,
-          katmanlar: (context, w, h) => [
-            for (final a in _adalar) _adaKonum(w, h, a),
-
-            // --- Zuzu (sol alt) ---
-            Positioned(
-              left: -w * .012,
-              bottom: -h * .03,
-              height: h * .62,
-              child: Basilabilir(
-                ses: false,
-                onTap: () => ZuzuSesServisi.instance
-                    .konus(dosya: Ses.anaMenu, metin: ZuzuMetin.anaMenu),
-                child: Image.asset(
-                  'assets/images/zuzu.png',
-                  height: h * .62,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          katmanlar: (context, w, h) {
+            final u = h / _gh; // 1 görsel pikselinin ekrandaki boyu
+            return [
+              // --- Başlık tabelasının yazısı ---
+              _px(
+                w,
+                h,
+                const Rect.fromLTWH(630, 92, 430, 160),
+                IgnorePointer(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        KonturluYazi('Online',
+                            boyut: 70,
+                            dolgu: Color(0xFF1E6BFF),
+                            kontur: Colors.white,
+                            kalinlik: 12),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            KonturluYazi('Mental',
+                                boyut: 56,
+                                dolgu: Color(0xFFFF7A1A),
+                                kontur: Colors.white,
+                                kalinlik: 10),
+                            SizedBox(width: 12),
+                            KonturluYazi('Akademi',
+                                boyut: 56,
+                                dolgu: Color(0xFF8A2BE2),
+                                kontur: Colors.white,
+                                kalinlik: 10),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
 
-            // --- Üst çubuk ---
-            _isimKutusu(w, h),
-            _baslikTabelasi(w, h),
-            _puanKutusu(w, h),
-            _yuvarlakDugme(w, h, .903, Icons.notifications_rounded,
-                () => _git(const BildirimSayfasi())),
-            _yuvarlakDugme(w, h, .955, Icons.settings_rounded,
-                () => _git(const AyarlarSayfasi())),
-
-            // --- Alt butonlar (iskele üzerinde) ---
-            _altDugme(w, h, .335, 'Başarılarım', Icons.emoji_events_rounded,
-                const Color(0xFFFFB300), () => _git(const BasarilarimSayfasi())),
-            _altDugme(w, h, .495, 'Görevler', Icons.assignment_rounded,
-                const Color(0xFFFF8A00), () => _git(const GorevlerSayfasi())),
-            _altDugme(w, h, .655, 'Rozetler', Icons.shield_rounded,
-                const Color(0xFFFF9800), () => _git(const RozetlerSayfasi()),
-                yildiz: true),
-          ],
-        ),
-      );
-
-  // ------------------------------------------------------------------
-  // ADA
-  // ------------------------------------------------------------------
-  Widget _adaKonum(double w, double h, _AdaBilgi a) {
-    final bw = w * .165;
-    final bh = h * .47;
-    return Positioned(
-      left: w * a.cx - bw / 2,
-      top: h * a.ust,
-      width: bw,
-      height: bh,
-      child: AnimatedBuilder(
-        animation: _dalga,
-        builder: (_, child) => Transform.translate(
-          offset: Offset(
-              0, math.sin((_dalga.value + a.faz) * 2 * math.pi) * h * .007),
-          child: child,
-        ),
-        child: Basilabilir(
-          onTap: () => _ada('${a.baslik[0]}${a.baslik.substring(1).toLowerCase()} ${a.alt}'),
-          child: _adaGovde(bw, bh, a),
-        ),
-      ),
-    );
-  }
-
-  Widget _simgeCiz(_Simge simge, double dd) {
-    switch (simge) {
-      case _Simge.hedef:
-        return Stack(alignment: Alignment.center, children: [
-          for (final k in [1.0, .74, .48, .22])
-            Container(
-              width: dd * .66 * k,
-              height: dd * .66 * k,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: k == 1.0 || k == .48
-                    ? Colors.white
-                    : const Color(0xFFD32F2F),
-              ),
-            ),
-          Positioned(
-            right: dd * .0,
-            top: dd * .0,
-            child: Icon(Icons.north_east_rounded,
-                size: dd * .32, color: const Color(0xFF8D4B14)),
-          ),
-        ]);
-      case _Simge.zuzu:
-        return Container(
-          width: dd * .88,
-          height: dd * .88,
-          decoration: const BoxDecoration(shape: BoxShape.circle),
-          child: const ZuzuYuzu(),
-        );
-      case _Simge.matematik:
-        Widget kare(String t, Color c) => Container(
-              width: dd * .31,
-              height: dd * .31,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: c,
-                borderRadius: BorderRadius.circular(dd * .08),
-                border: Border.all(color: Colors.white, width: 2.5),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-                ],
-              ),
-              child: Text(t,
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: dd * .26,
-                      fontWeight: FontWeight.w900,
-                      height: 1)),
-            );
-        return Column(mainAxisSize: MainAxisSize.min, children: [
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            kare('+', const Color(0xFF43A047)),
-            SizedBox(width: dd * .05),
-            kare('−', const Color(0xFF1565C0)),
-          ]),
-          SizedBox(height: dd * .05),
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            kare('×', const Color(0xFFFFB300)),
-            SizedBox(width: dd * .05),
-            kare('÷', const Color(0xFFE53935)),
-          ]),
-        ]);
-      case _Simge.yapboz:
-        return Icon(Icons.extension_rounded,
-            size: dd * .72,
-            color: Colors.white,
-            shadows: const [
-              Shadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3)),
-            ]);
-      case _Simge.simsek:
-        return Icon(Icons.bolt_rounded,
-            size: dd * .78,
-            color: const Color(0xFFFFEB3B),
-            shadows: const [
-              Shadow(color: Colors.black38, blurRadius: 6, offset: Offset(0, 3)),
-            ]);
-    }
-  }
-
-  Widget _adaGovde(double bw, double bh, _AdaBilgi a) {
-    final dd = bw * .74; // kubbe çapı
-    final renk = a.renk;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // Su halkası, kayalar, kum, çimen
-        Positioned.fill(
-          child: CustomPaint(painter: _AdaZeminPainter()),
-        ),
-        // Renkli kubbe
-        Positioned(
-          top: 0,
-          left: (bw - dd) / 2,
-          width: dd,
-          height: dd,
-          child: Container(
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                center: const Alignment(-.35, -.45),
-                radius: 1.0,
-                colors: [
-                  Color.lerp(renk, Colors.white, .40)!,
-                  renk,
-                  Color.lerp(renk, Colors.black, .30)!,
-                ],
-                stops: const [0, .55, 1],
-              ),
-              border: Border.all(
-                  color: Color.lerp(renk, Colors.white, .55)!, width: 3.5),
-              boxShadow: const [
-                BoxShadow(
-                    color: Colors.black26, blurRadius: 12, offset: Offset(0, 6)),
-              ],
-            ),
-            child: Padding(
-              padding: EdgeInsets.only(bottom: dd * .12),
-              child: _simgeCiz(a.simge, dd),
-            ),
-          ),
-        ),
-        // Parlama
-        Positioned(
-          top: dd * .08,
-          left: (bw - dd) / 2 + dd * .16,
-          width: dd * .30,
-          height: dd * .14,
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color.fromRGBO(255, 255, 255, .32),
-              borderRadius:
-                  BorderRadius.all(Radius.elliptical(dd * .15, dd * .07)),
-            ),
-          ),
-        ),
-        // Ahşap tabela
-        Positioned(
-          left: bw * .07,
-          right: bw * .07,
-          top: bh * .50,
-          height: bh * .27,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFFF3B060), Color(0xFFCB7A2E)],
-              ),
-              borderRadius: BorderRadius.circular(bh * .045),
-              border: Border.all(color: const Color(0xFF7A3E10), width: 3),
-              boxShadow: const [
-                BoxShadow(
-                    color: Colors.black38, blurRadius: 6, offset: Offset(0, 4)),
-              ],
-            ),
-            child: Stack(
-              children: [
-                // tahta çizgileri
-                Positioned.fill(
-                  child: CustomPaint(painter: _TahtaPainter()),
+              // --- Adalar: dokunma alanı + tabela yazısı ---
+              for (final a in _adalar) ...[
+                _px(
+                  w,
+                  h,
+                  a.alan,
+                  Basilabilir(
+                    onTap: () => _ada(
+                        '${a.baslik[0]}${a.baslik.substring(1).toLowerCase()} ${a.alt}'),
+                    child: const SizedBox.expand(),
+                  ),
                 ),
-                Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: bw * .04),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          KonturluYazi(a.baslik,
-                              boyut: bh * .095,
-                              dolgu: a.yaziDolgu,
-                              kontur: a.yaziKontur,
-                              kalinlik: bh * .022),
-                          KonturluYazi(a.alt,
-                              boyut: bh * .075,
-                              dolgu: a.yaziDolgu,
-                              kontur: a.yaziKontur,
-                              kalinlik: bh * .018),
-                        ],
+                _px(
+                  w,
+                  h,
+                  a.tabela,
+                  IgnorePointer(
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            KonturluYazi(a.baslik,
+                                boyut: 40,
+                                dolgu: a.yaziDolgu,
+                                kontur: a.yaziKontur,
+                                kalinlik: 8),
+                            KonturluYazi(a.alt,
+                                boyut: 31,
+                                dolgu: a.yaziDolgu,
+                                kontur: a.yaziKontur,
+                                kalinlik: 6.5),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ],
-            ),
-          ),
+
+              // --- Zuzu (sol alt) ---
+              Positioned(
+                left: -w * .012,
+                bottom: -h * .02,
+                height: h * .53,
+                child: Basilabilir(
+                  ses: false,
+                  onTap: () => ZuzuSesServisi.instance
+                      .konus(dosya: Ses.anaMenu, metin: ZuzuMetin.anaMenu),
+                  child: Image.asset(
+                    'assets/images/zuzu.png',
+                    height: h * .53,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+
+              // --- Üst çubuk ---
+              _isimKutusu(w, h, u),
+              _puanKutusu(w, h, u),
+              _yuvarlakDugme(w, h, u, 1459, Icons.notifications_rounded,
+                  () => _git(const BildirimSayfasi())),
+              _yuvarlakDugme(w, h, u, 1562, Icons.settings_rounded,
+                  () => _git(const AyarlarSayfasi())),
+
+              // --- Alt butonlar (iskele üzerinde) ---
+              _altDugme(w, h, u, 472, 'Başarılarım', Icons.emoji_events_rounded,
+                  const Color(0xFFFFB300), () => _git(const BasarilarimSayfasi())),
+              _altDugme(w, h, u, 772, 'Görevler', Icons.assignment_rounded,
+                  const Color(0xFFFF8A00), () => _git(const GorevlerSayfasi())),
+              _altDugme(w, h, u, 1073, 'Rozetler', Icons.shield_rounded,
+                  const Color(0xFFFF9800), () => _git(const RozetlerSayfasi()),
+                  yildiz: true),
+            ];
+          },
         ),
-        // Yapraklar ve çiçekler (tabelanın iki yanında)
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(painter: _YaprakPainter(renk)),
-          ),
-        ),
-      ],
-    );
-  }
+      );
 
   // ------------------------------------------------------------------
   // ÜST ÇUBUK
   // ------------------------------------------------------------------
-  BoxDecoration _beyazKutu(double h) => BoxDecoration(
+  BoxDecoration _beyazKutu(double u, {double yaricap = 40}) => BoxDecoration(
         color: const Color.fromRGBO(255, 255, 255, .97),
-        borderRadius: BorderRadius.circular(h * .06),
+        borderRadius: BorderRadius.circular(yaricap * u),
         border: Border.all(color: const Color(0xFFB8D9FF), width: 3),
         boxShadow: const [
           BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
         ],
       );
 
-  Widget _isimKutusu(double w, double h) => Positioned(
-        left: w * .012,
-        top: h * .03,
-        width: w * .165,
-        height: h * .14,
-        child: Basilabilir(
+  Widget _isimKutusu(double w, double h, double u) => _px(
+        w,
+        h,
+        const Rect.fromLTWH(30, 26, 300, 130),
+        Basilabilir(
           onTap: () => _git(const ProfilSayfasi()),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               Positioned(
-                left: h * .05,
+                left: 70 * u,
                 right: 0,
-                top: h * .025,
-                bottom: h * .025,
+                top: 26 * u,
+                bottom: 26 * u,
                 child: Container(
                   alignment: Alignment.centerLeft,
-                  padding: EdgeInsets.only(left: h * .10, right: h * .02),
-                  decoration: _beyazKutu(h),
+                  padding: EdgeInsets.only(left: 70 * u, right: 12 * u),
+                  decoration: _beyazKutu(u),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
@@ -1131,7 +991,7 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani>
                       Oyuncu.instance.ad.isEmpty ? 'Misafir' : Oyuncu.instance.ad,
                       maxLines: 1,
                       style: TextStyle(
-                        fontSize: h * .05,
+                        fontSize: 40 * u,
                         fontWeight: FontWeight.w900,
                         color: kMavi,
                       ),
@@ -1142,10 +1002,10 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani>
               Positioned(
                 left: 0,
                 top: 0,
-                width: h * .14,
-                height: h * .14,
+                width: 124 * u,
+                height: 124 * u,
                 child: Container(
-                  padding: EdgeInsets.all(h * .008),
+                  padding: EdgeInsets.all(6 * u),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white,
@@ -1163,99 +1023,22 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani>
         ),
       );
 
-  Widget _baslikTabelasi(double w, double h) => Positioned(
-        left: w * .315,
-        top: h * .045,
-        width: w * .37,
-        height: h * .26,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xFFF5B563), Color(0xFFD27D2C)],
-                  ),
-                  borderRadius: BorderRadius.circular(h * .07),
-                  border: Border.all(
-                      color: const Color(0xFFFFF1D0), width: h * .009),
-                  boxShadow: const [
-                    BoxShadow(
-                        color: Colors.black45,
-                        blurRadius: 14,
-                        offset: Offset(0, 7)),
-                  ],
-                ),
-                child: Stack(
-                  children: [
-                    Positioned.fill(child: CustomPaint(painter: _TahtaPainter())),
-                    Center(
-                      child: FittedBox(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              KonturluYazi('Online',
-                                  boyut: 74,
-                                  dolgu: Color(0xFF1E6BFF),
-                                  kontur: Colors.white,
-                                  kalinlik: 12),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  KonturluYazi('Mental',
-                                      boyut: 60,
-                                      dolgu: Color(0xFFFF7A1A),
-                                      kontur: Colors.white,
-                                      kalinlik: 11),
-                                  SizedBox(width: 14),
-                                  KonturluYazi('Akademi',
-                                      boyut: 60,
-                                      dolgu: Color(0xFF8A2BE2),
-                                      kontur: Colors.white,
-                                      kalinlik: 11),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // sol ve sağ üst köşelerde yaprak + çiçek
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(painter: _BaslikSusPainter()),
-              ),
-            ),
-          ],
-        ),
-      );
-
-  Widget _puanKutusu(double w, double h) => Positioned(
-        left: w * .735,
-        top: h * .03,
-        width: w * .12,
-        height: h * .14,
-        child: Stack(
+  Widget _puanKutusu(double w, double h, double u) => _px(
+        w,
+        h,
+        const Rect.fromLTWH(1256, 24, 190, 86),
+        Stack(
           clipBehavior: Clip.none,
           children: [
             Positioned(
-              left: h * .05,
+              left: 40 * u,
               right: 0,
-              top: h * .025,
-              bottom: h * .025,
+              top: 12 * u,
+              bottom: 12 * u,
               child: Container(
                 alignment: Alignment.centerLeft,
-                padding: EdgeInsets.only(left: h * .09, right: h * .02),
-                decoration: _beyazKutu(h),
+                padding: EdgeInsets.only(left: 50 * u, right: 10 * u),
+                decoration: _beyazKutu(u),
                 child: ValueListenableBuilder<int>(
                   valueListenable: Oyuncu.instance.puan,
                   builder: (_, p, __) => FittedBox(
@@ -1264,7 +1047,7 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani>
                     child: Text(
                       '$p',
                       style: TextStyle(
-                        fontSize: h * .058,
+                        fontSize: 44 * u,
                         fontWeight: FontWeight.w900,
                         color: kMavi,
                       ),
@@ -1276,8 +1059,8 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani>
             Positioned(
               left: 0,
               top: 0,
-              width: h * .14,
-              height: h * .14,
+              width: 86 * u,
+              height: 86 * u,
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -1292,10 +1075,10 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani>
                   ],
                 ),
                 child: Icon(Icons.star_rounded,
-                    size: h * .09,
+                    size: 52 * u,
                     color: const Color(0xFFFFF3B0),
                     shadows: const [
-                      Shadow(color: Color(0xFFB35F00), blurRadius: 0, offset: Offset(1.5, 2)),
+                      Shadow(color: Color(0xFFB35F00), offset: Offset(1.5, 2)),
                     ]),
               ),
             ),
@@ -1303,14 +1086,13 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani>
         ),
       );
 
-  Widget _yuvarlakDugme(
-          double w, double h, double sol, IconData ikon, VoidCallback onTap) =>
-      Positioned(
-        left: w * sol - h * .06,
-        top: h * .03,
-        width: h * .12,
-        height: h * .12,
-        child: Basilabilir(
+  Widget _yuvarlakDugme(double w, double h, double u, double x, IconData ikon,
+          VoidCallback onTap) =>
+      _px(
+        w,
+        h,
+        Rect.fromLTWH(x, 24, 82, 82),
+        Basilabilir(
           onTap: onTap,
           child: Container(
             decoration: BoxDecoration(
@@ -1322,7 +1104,7 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani>
                     color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
               ],
             ),
-            child: Icon(ikon, size: h * .07, color: const Color(0xFF0876E8)),
+            child: Icon(ikon, size: 48 * u, color: const Color(0xFF0876E8)),
           ),
         ),
       );
@@ -1330,19 +1112,18 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani>
   // ------------------------------------------------------------------
   // ALT BUTONLAR
   // ------------------------------------------------------------------
-  Widget _altDugme(double w, double h, double sol, String ad, IconData ikon,
-          Color ikonRenk, VoidCallback onTap,
+  Widget _altDugme(double w, double h, double u, double x, String ad,
+          IconData ikon, Color ikonRenk, VoidCallback onTap,
           {bool yildiz = false}) =>
-      Positioned(
-        left: w * sol,
-        top: h * .845,
-        width: w * .15,
-        height: h * .115,
-        child: Basilabilir(
+      _px(
+        w,
+        h,
+        Rect.fromLTWH(x, 762, 283, 92),
+        Basilabilir(
           onTap: onTap,
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: w * .008),
-            decoration: _beyazKutu(h),
+            padding: EdgeInsets.symmetric(horizontal: 12 * u),
+            decoration: _beyazKutu(u, yaricap: 46),
             child: Center(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -1352,22 +1133,22 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani>
                     Stack(
                       alignment: Alignment.center,
                       children: [
-                        Icon(ikon,
-                            size: h * .08,
-                            color: ikonRenk,
-                            shadows: const [
-                              Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-                            ]),
+                        Icon(ikon, size: 60 * u, color: ikonRenk, shadows: const [
+                          Shadow(
+                              color: Colors.black26,
+                              blurRadius: 4,
+                              offset: Offset(0, 2)),
+                        ]),
                         if (yildiz)
                           Icon(Icons.star_rounded,
-                              size: h * .035, color: const Color(0xFFFFF3B0)),
+                              size: 26 * u, color: const Color(0xFFFFF3B0)),
                       ],
                     ),
-                    SizedBox(width: w * .008),
+                    SizedBox(width: 12 * u),
                     Text(
                       ad,
                       style: TextStyle(
-                        fontSize: h * .045,
+                        fontSize: 36 * u,
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF1247D7),
                       ),
@@ -1379,189 +1160,6 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani>
           ),
         ),
       );
-}
-
-enum _Simge { hedef, zuzu, matematik, yapboz, simsek }
-
-// ---------------------------------------------------------------------------
-// ÇİZİM YARDIMCILARI
-// ---------------------------------------------------------------------------
-void _yaprakCiz(Canvas c, Offset o, double len, double aci, Color renk) {
-  c.save();
-  c.translate(o.dx, o.dy);
-  c.rotate(aci);
-  final yol = Path()
-    ..moveTo(0, 0)
-    ..quadraticBezierTo(len * .35, -len * .30, len, 0)
-    ..quadraticBezierTo(len * .35, len * .30, 0, 0);
-  c.drawPath(yol, Paint()..color = renk);
-  c.drawPath(
-      yol,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..color = const Color(0x33000000));
-  c.drawLine(Offset.zero, Offset(len * .88, 0),
-      Paint()..color = const Color(0x40FFFFFF)..strokeWidth = 1.4);
-  c.restore();
-}
-
-void _cicekCiz(Canvas c, Offset o, double r, Color petal) {
-  final p = Paint()..color = petal;
-  for (var i = 0; i < 5; i++) {
-    final t = i * 2 * math.pi / 5;
-    c.drawCircle(o + Offset(math.cos(t), math.sin(t)) * r * .75, r * .62, p);
-  }
-  c.drawCircle(o, r * .5, Paint()..color = const Color(0xFFFFD54F));
-}
-
-class _AdaZeminPainter extends CustomPainter {
-  @override
-  void paint(Canvas c, Size s) {
-    final w = s.width, h = s.height;
-    // su halkası
-    final halka = Rect.fromLTWH(-w * .02, h * .72, w * 1.04, h * .28);
-    c.drawOval(halka, Paint()..color = const Color(0x2EFFFFFF));
-    c.drawOval(
-        halka,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = const Color(0x88FFFFFF));
-    // kum
-    final kum = Rect.fromLTWH(w * .04, h * .74, w * .92, h * .23);
-    c.drawOval(kum.shift(const Offset(0, 5)), Paint()..color = const Color(0x33000000));
-    c.drawOval(
-        kum,
-        Paint()
-          ..shader = const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFFAE9BA), Color(0xFFD9B26C)],
-          ).createShader(kum));
-    c.drawOval(
-        kum,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = const Color(0xFFB88F4E));
-    // çimen
-    final cimen = Rect.fromLTWH(w * .14, h * .735, w * .72, h * .13);
-    c.drawOval(
-        cimen,
-        Paint()
-          ..shader = const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF6BD65F), Color(0xFF2E9A3E)],
-          ).createShader(cimen));
-    // kayalar
-    final kaya = [
-      [.10, .90, .09],
-      [.22, .95, .07],
-      [.50, .975, .08],
-      [.78, .95, .07],
-      [.90, .90, .09],
-    ];
-    for (final k in kaya) {
-      final o = Offset(w * k[0], h * k[1]);
-      final r = w * k[2];
-      final rect = Rect.fromCenter(center: o, width: r * 2, height: r * 1.3);
-      c.drawOval(
-          rect,
-          Paint()
-            ..shader = const RadialGradient(
-              center: Alignment(-.4, -.5),
-              colors: [Color(0xFFD7D2C8), Color(0xFF9C9488)],
-            ).createShader(rect));
-      c.drawOval(
-          rect,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5
-            ..color = const Color(0x55000000));
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter old) => false;
-}
-
-class _YaprakPainter extends CustomPainter {
-  final Color renk;
-  _YaprakPainter(this.renk);
-
-  @override
-  void paint(Canvas c, Size s) {
-    final w = s.width, h = s.height;
-    const yesil1 = Color(0xFF2E8B3A);
-    const yesil2 = Color(0xFF4CB848);
-    const yesil3 = Color(0xFF7BD25A);
-    final y = h * .64;
-    // sol yaprak demeti
-    _yaprakCiz(c, Offset(w * .10, y), w * .22, -2.6, yesil1);
-    _yaprakCiz(c, Offset(w * .10, y), w * .20, -1.9, yesil2);
-    _yaprakCiz(c, Offset(w * .10, y), w * .18, -3.3, yesil3);
-    _yaprakCiz(c, Offset(w * .08, y + h * .05), w * .18, 3.5, yesil2);
-    // sağ yaprak demeti
-    _yaprakCiz(c, Offset(w * .90, y), w * .22, -.55, yesil1);
-    _yaprakCiz(c, Offset(w * .90, y), w * .20, -1.25, yesil2);
-    _yaprakCiz(c, Offset(w * .90, y), w * .18, .2, yesil3);
-    _yaprakCiz(c, Offset(w * .92, y + h * .05), w * .18, -.35, yesil2);
-    // çiçekler
-    _cicekCiz(c, Offset(w * .07, y - h * .02), w * .045, const Color(0xFFFF6FA5));
-    _cicekCiz(c, Offset(w * .13, y + h * .07), w * .035, Colors.white);
-    _cicekCiz(c, Offset(w * .93, y - h * .01), w * .045, const Color(0xFFFFB3D1));
-    _cicekCiz(c, Offset(w * .87, y + h * .075), w * .035, const Color(0xFFFFE066));
-  }
-
-  @override
-  bool shouldRepaint(covariant _YaprakPainter old) => old.renk != renk;
-}
-
-class _TahtaPainter extends CustomPainter {
-  @override
-  void paint(Canvas c, Size s) {
-    final p = Paint()
-      ..color = const Color(0x22000000)
-      ..strokeWidth = 1.5;
-    for (var i = 1; i < 4; i++) {
-      final y = s.height * i / 4;
-      c.drawLine(Offset(s.width * .04, y), Offset(s.width * .96, y), p);
-    }
-    final civi = Paint()..color = const Color(0xFF8F5A24);
-    for (final x in [.05, .95]) {
-      for (final y in [.14, .86]) {
-        c.drawCircle(Offset(s.width * x, s.height * y), s.height * .035, civi);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter old) => false;
-}
-
-class _BaslikSusPainter extends CustomPainter {
-  @override
-  void paint(Canvas c, Size s) {
-    final w = s.width, h = s.height;
-    const g1 = Color(0xFF2E8B3A), g2 = Color(0xFF4CB848), g3 = Color(0xFF7BD25A);
-    // sol üst
-    _yaprakCiz(c, Offset(w * .03, h * .10), h * .34, -.6, g1);
-    _yaprakCiz(c, Offset(w * .03, h * .10), h * .30, -1.4, g2);
-    _yaprakCiz(c, Offset(w * .03, h * .10), h * .28, .35, g3);
-    _cicekCiz(c, Offset(w * .04, h * .06), h * .09, const Color(0xFFFF4D7D));
-    _cicekCiz(c, Offset(w * .10, h * .10), h * .06, const Color(0xFFFFD54F));
-    // sağ üst
-    _yaprakCiz(c, Offset(w * .97, h * .10), h * .34, -2.5, g1);
-    _yaprakCiz(c, Offset(w * .97, h * .10), h * .30, -1.7, g2);
-    _yaprakCiz(c, Offset(w * .97, h * .10), h * .28, 3.0, g3);
-    _cicekCiz(c, Offset(w * .96, h * .06), h * .09, const Color(0xFFFFB300));
-    _cicekCiz(c, Offset(w * .90, h * .10), h * .06, const Color(0xFFFF6FA5));
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
 // ===========================================================================
