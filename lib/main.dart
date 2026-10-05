@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -106,11 +107,11 @@ const rozetListesi = [
 // görselin kendisine göre oran olarak verilir.
 //
 // kGorselOrani   : acilis, hos_geldin, seni_taniyalim, profil görselleri (2000x900)
-// kAnaMenuOrani  : ana_menu görseli (1670x942)
+// kAnaMenuOrani  : ana_menu görseli (2000x900)
 // Görsellerin boyutu farklıysa buradaki sayıları değiştir.
 // ---------------------------------------------------------------------------
 const double kGorselOrani = 2000 / 900;
-const double kAnaMenuOrani = 1670 / 942;
+const double kAnaMenuOrani = 2000 / 900;
 
 class Sahne extends StatelessWidget {
   final String arkaPlan;
@@ -337,7 +338,6 @@ class HosGeldinEkrani extends StatefulWidget {
 
 class _HosGeldinEkraniState extends State<HosGeldinEkrani> {
   bool _konusuyor = false;
-  String _sesDurumu = '';
 
   @override
   void initState() {
@@ -351,12 +351,7 @@ class _HosGeldinEkraniState extends State<HosGeldinEkrani> {
     final durum = await ZuzuSesServisi.instance.konus(
         dosya: Ses.hosGeldin, metin: ZuzuMetin.hosGeldin);
     debugPrint('SES DURUMU: $durum');
-    if (mounted) {
-      setState(() {
-        _konusuyor = false;
-        _sesDurumu = durum;
-      });
-    }
+    if (mounted) setState(() => _konusuyor = false);
   }
 
   @override
@@ -711,50 +706,84 @@ class ZuzuYuzu extends StatelessWidget {
 
 // ===========================================================================
 // 5. ANA MENÜ
-// Görsel (ana_menu.png) adalar, başlık, puan, zil, ayarlar, Zuzu ve alt
-// butonların hepsini zaten içerir. Biz üstüne görünmez dokunma alanları
-// koyuyoruz ve boş isim kutusuna çocuğun adını yazıyoruz.
+// Arka plan (assets/images/ana_menu.png) boş ada manzarasıdır. Başlık
+// tabelası, adalar, puan, zil, ayarlar, Zuzu ve alt butonlar kodla çizilir.
+// Tüm konumlar görselin kendisine göre orandır.
 // ===========================================================================
+
+/// Kenarlıklı (konturlu) yazı: çocuk oyunlarındaki kalın yazı görünümü.
+class KonturluYazi extends StatelessWidget {
+  final String yazi;
+  final double boyut;
+  final Color dolgu;
+  final Color kontur;
+  final double kalinlik;
+
+  const KonturluYazi(
+    this.yazi, {
+    super.key,
+    required this.boyut,
+    this.dolgu = Colors.white,
+    this.kontur = kMavi,
+    this.kalinlik = 4,
+  });
+
+  @override
+  Widget build(BuildContext context) => Stack(
+        alignment: Alignment.center,
+        children: [
+          Text(
+            yazi,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: boyut,
+              fontWeight: FontWeight.w900,
+              height: 1.05,
+              foreground: Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = kalinlik
+                ..strokeJoin = StrokeJoin.round
+                ..color = kontur,
+            ),
+          ),
+          Text(
+            yazi,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: boyut,
+              fontWeight: FontWeight.w900,
+              height: 1.05,
+              color: dolgu,
+            ),
+          ),
+        ],
+      );
+}
+
 class AnaMenuEkrani extends StatefulWidget {
   const AnaMenuEkrani({super.key});
   @override
   State<AnaMenuEkrani> createState() => _AnaMenuEkraniState();
 }
 
-class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
+class _AnaMenuEkraniState extends State<AnaMenuEkrani>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _dalga;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) =>
-        ZuzuSesServisi.instance.konus(dosya: Ses.anaMenu, metin: ZuzuMetin.anaMenu));
+    _dalga = AnimationController(vsync: this, duration: const Duration(seconds: 4))
+      ..repeat();
+    WidgetsBinding.instance.addPostFrameCallback((_) => ZuzuSesServisi.instance
+        .konus(dosya: Ses.anaMenu, metin: ZuzuMetin.anaMenu));
   }
 
   @override
   void dispose() {
+    _dalga.dispose();
     ZuzuSesServisi.instance.durdur();
     super.dispose();
-  }
-
-  // Görsel koordinatları (1670x942) -> oran
-  static const double _gw = 1670, _gh = 942;
-
-  Widget _alan(double w, double h, double x, double y, double ww, double hh,
-      VoidCallback onTap,
-      {Widget? child, String ipucu = ''}) {
-    return Positioned(
-      left: w * x / _gw,
-      top: h * y / _gh,
-      width: w * ww / _gw,
-      height: h * hh / _gh,
-      child: Basilabilir(
-        onTap: onTap,
-        child: Semantics(
-          label: ipucu,
-          button: true,
-          child: child ?? const SizedBox.expand(),
-        ),
-      ),
-    );
   }
 
   void _git(Widget sayfa) =>
@@ -776,89 +805,560 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
           arkaPlan: 'assets/images/ana_menu.png',
           gorselOrani: kAnaMenuOrani,
           katmanlar: (context, w, h) => [
-            // Boş isim kutusuna çocuğun adı
+            // --- Adalar ---
+            _adaKonum(w, h, .205, .30, 0.0, const Color(0xFFE53935),
+                'DİKKAT', 'ADASI', _Simge.hedef),
+            _adaKonum(w, h, .355, .33, .2, const Color(0xFFE040B8),
+                'ZUZU', 'ADASI', _Simge.zuzu),
+            _adaKonum(w, h, .505, .36, .4, const Color(0xFF1E88E5),
+                'MATEMATİK', 'ADASI', _Simge.matematik),
+            _adaKonum(w, h, .655, .33, .6, const Color(0xFFFFB300),
+                'MANTIK', 'ADASI', _Simge.yapboz),
+            _adaKonum(w, h, .805, .30, .8, const Color(0xFF8E3FE0),
+                'HIZ', 'ADASI', _Simge.simsek),
+
+            // --- Zuzu (sol alt) ---
             Positioned(
-              left: w * 152 / _gw,
-              top: h * 58 / _gh,
-              width: w * 160 / _gw,
-              height: h * 64 / _gh,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: EdgeInsets.only(left: w * .006),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(Oyuncu.instance.ad,
-                        maxLines: 1,
-                        style: TextStyle(
-                            fontSize: h * .04,
-                            fontWeight: FontWeight.w900,
-                            color: kMavi)),
-                  ),
-                ),
-              ),
-            ),
-            // Puan: görseldeki sabit 250'yi örter ve gerçek puanı yazar
-            Positioned(
-              left: w * 1340 / _gw,
-              top: h * 40 / _gh,
-              width: w * 92 / _gw,
-              height: h * 58 / _gh,
-              child: ValueListenableBuilder<int>(
-                valueListenable: Oyuncu.instance.puan,
-                builder: (_, p, __) => Container(
-                  alignment: Alignment.centerLeft,
-                  color: const Color(0xFFF4F9FF),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('$p',
-                        style: TextStyle(
-                            fontSize: h * .05,
-                            fontWeight: FontWeight.w900,
-                            color: kMavi)),
-                  ),
-                ),
-              ),
-            ),
-
-            // Profil
-            _alan(w, h, 35, 30, 285, 120, () => _git(const ProfilSayfasi()),
-                ipucu: 'Profil'),
-            // Bildirim / Ayarlar
-            _alan(w, h, 1458, 28, 84, 80, () => _git(const BildirimSayfasi()),
-                ipucu: 'Bildirimler'),
-            _alan(w, h, 1562, 28, 84, 80, () => _git(const AyarlarSayfasi()),
-                ipucu: 'Ayarlar'),
-
-            // Adalar
-            _alan(w, h, 135, 330, 335, 255, () => _ada('Dikkat Adası'),
-                ipucu: 'Dikkat Adası'),
-            _alan(w, h, 475, 330, 290, 300, () => _ada('Zuzu Adası'),
-                ipucu: 'Zuzu Adası'),
-            _alan(w, h, 760, 372, 280, 293, () => _ada('Matematik Adası'),
-                ipucu: 'Matematik Adası'),
-            _alan(w, h, 1035, 330, 285, 310, () => _ada('Mantık Adası'),
-                ipucu: 'Mantık Adası'),
-            _alan(w, h, 1310, 330, 325, 270, () => _ada('Hız Adası'),
-                ipucu: 'Hız Adası'),
-
-            // Alt butonlar
-            _alan(w, h, 472, 757, 283, 95, () => _git(const BasarilarimSayfasi()),
-                ipucu: 'Başarılarım'),
-            _alan(w, h, 772, 757, 283, 95, () => _git(const GorevlerSayfasi()),
-                ipucu: 'Görevler'),
-            _alan(w, h, 1073, 757, 292, 95, () => _git(const RozetlerSayfasi()),
-                ipucu: 'Rozetler'),
-
-            // Zuzu'ya dokununca konuşur
-            _alan(w, h, 0, 470, 430, 470,
-                () => ZuzuSesServisi.instance
+              left: -w * .01,
+              bottom: -h * .02,
+              height: h * .56,
+              child: Basilabilir(
+                ses: false,
+                onTap: () => ZuzuSesServisi.instance
                     .konus(dosya: Ses.anaMenu, metin: ZuzuMetin.anaMenu),
-                ipucu: 'Zuzu'),
+                child: Image.asset(
+                  'assets/images/zuzu.png',
+                  height: h * .56,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
+
+            // --- Üst çubuk ---
+            _isimKutusu(w, h),
+            _baslikTabelasi(w, h),
+            _puanKutusu(w, h),
+            _yuvarlakDugme(w, h, .902, Icons.notifications_rounded,
+                () => _git(const BildirimSayfasi())),
+            _yuvarlakDugme(w, h, .950, Icons.settings_rounded,
+                () => _git(const AyarlarSayfasi())),
+
+            // --- Alt butonlar (iskele üzerinde) ---
+            _altDugme(w, h, .335, 'Başarılarım', Icons.emoji_events_rounded,
+                const Color(0xFFFFA900), () => _git(const BasarilarimSayfasi())),
+            _altDugme(w, h, .495, 'Görevler', Icons.assignment_rounded,
+                const Color(0xFFFF8A00), () => _git(const GorevlerSayfasi())),
+            _altDugme(w, h, .655, 'Rozetler', Icons.workspace_premium_rounded,
+                const Color(0xFFE8A200), () => _git(const RozetlerSayfasi())),
           ],
         ),
       );
+
+  // ------------------------------------------------------------------
+  // ADA
+  // ------------------------------------------------------------------
+  Widget _adaKonum(double w, double h, double cx, double ust, double faz,
+      Color renk, String baslik, String alt, _Simge simge) {
+    final bw = w * .15;
+    final bh = h * .46;
+    return Positioned(
+      left: w * cx - bw / 2,
+      top: h * ust,
+      width: bw,
+      height: bh,
+      child: AnimatedBuilder(
+        animation: _dalga,
+        builder: (_, child) => Transform.translate(
+          offset: Offset(
+              0, math.sin((_dalga.value + faz) * 2 * math.pi) * h * .007),
+          child: child,
+        ),
+        child: Basilabilir(
+          onTap: () => _ada('${_basHarf(baslik)} $alt'),
+          child: _adaGovde(bw, bh, renk, baslik, alt, simge),
+        ),
+      ),
+    );
+  }
+
+  String _basHarf(String b) => b[0] + b.substring(1).toLowerCase();
+
+  Widget _simgeCiz(_Simge simge, double dd) {
+    switch (simge) {
+      case _Simge.hedef:
+        return Stack(alignment: Alignment.center, children: [
+          for (final k in [1.0, .72, .44, .18])
+            Container(
+              width: dd * .62 * k,
+              height: dd * .62 * k,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: k == 1.0 || k == .44
+                    ? Colors.white
+                    : const Color(0xFFD32F2F),
+              ),
+            ),
+          Positioned(
+            right: dd * .02,
+            top: dd * .02,
+            child: Transform.rotate(
+              angle: .0,
+              child: Icon(Icons.north_east_rounded,
+                  size: dd * .30, color: const Color(0xFF8D4B14)),
+            ),
+          ),
+        ]);
+      case _Simge.zuzu:
+        return SizedBox(
+            width: dd * .86, height: dd * .86, child: const ZuzuYuzu());
+      case _Simge.matematik:
+        Widget kare(String t, Color c) => Container(
+              width: dd * .30,
+              height: dd * .30,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: c,
+                borderRadius: BorderRadius.circular(dd * .07),
+                border: Border.all(color: Colors.white54, width: 2),
+              ),
+              child: Text(t,
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: dd * .24,
+                      fontWeight: FontWeight.w900,
+                      height: 1)),
+            );
+        return Column(mainAxisSize: MainAxisSize.min, children: [
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            kare('+', const Color(0xFF43A047)),
+            SizedBox(width: dd * .04),
+            kare('−', const Color(0xFF1565C0)),
+          ]),
+          SizedBox(height: dd * .04),
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            kare('×', const Color(0xFFFFB300)),
+            SizedBox(width: dd * .04),
+            kare('÷', const Color(0xFFE53935)),
+          ]),
+        ]);
+      case _Simge.yapboz:
+        return Icon(Icons.extension_rounded,
+            size: dd * .66,
+            color: Colors.white,
+            shadows: const [
+              Shadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3)),
+            ]);
+      case _Simge.simsek:
+        return Icon(Icons.bolt_rounded,
+            size: dd * .72,
+            color: const Color(0xFFFFEB3B),
+            shadows: const [
+              Shadow(color: Colors.black38, blurRadius: 6, offset: Offset(0, 3)),
+            ]);
+    }
+  }
+
+  Widget _adaGovde(double bw, double bh, Color renk, String baslik, String alt,
+      _Simge simge) {
+    final dd = bw * .70; // üstteki renkli kubbenin çapı
+    final koyu = Color.lerp(renk, Colors.black, .45)!;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Su halkası
+        Positioned(
+          left: -bw * .04,
+          right: -bw * .04,
+          bottom: 0,
+          height: bh * .26,
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color.fromRGBO(255, 255, 255, .18),
+              borderRadius:
+                  BorderRadius.all(Radius.elliptical(bw * .55, bh * .13)),
+              border: Border.all(
+                  color: const Color.fromRGBO(255, 255, 255, .55), width: 2),
+            ),
+          ),
+        ),
+        // Kum zemin
+        Positioned(
+          left: bw * .02,
+          right: bw * .02,
+          bottom: bh * .03,
+          height: bh * .22,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFF8E7B6), Color(0xFFD8B26E)],
+              ),
+              borderRadius:
+                  BorderRadius.all(Radius.elliptical(bw * .5, bh * .11)),
+              border: Border.all(color: const Color(0xFFB88F4E), width: 2),
+              boxShadow: const [
+                BoxShadow(
+                    color: Colors.black26, blurRadius: 8, offset: Offset(0, 4)),
+              ],
+            ),
+          ),
+        ),
+        // Çimen
+        Positioned(
+          left: bw * .10,
+          right: bw * .10,
+          bottom: bh * .13,
+          height: bh * .15,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF5BC857), Color(0xFF2E9A3E)],
+              ),
+              borderRadius:
+                  BorderRadius.all(Radius.elliptical(bw * .4, bh * .08)),
+            ),
+          ),
+        ),
+        // Renkli kubbe
+        Positioned(
+          top: 0,
+          left: (bw - dd) / 2,
+          width: dd,
+          height: dd,
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                center: const Alignment(-.35, -.45),
+                radius: 1.0,
+                colors: [
+                  Color.lerp(renk, Colors.white, .35)!,
+                  renk,
+                  Color.lerp(renk, Colors.black, .3)!,
+                ],
+                stops: const [0, .55, 1],
+              ),
+              border: Border.all(
+                  color: Color.lerp(renk, Colors.white, .5)!, width: 3),
+              boxShadow: const [
+                BoxShadow(
+                    color: Colors.black26, blurRadius: 10, offset: Offset(0, 5)),
+              ],
+            ),
+            child: Padding(
+              padding: EdgeInsets.only(bottom: dd * .10),
+              child: _simgeCiz(simge, dd),
+            ),
+          ),
+        ),
+        // Ahşap tabela
+        Positioned(
+          left: bw * .02,
+          right: bw * .02,
+          top: bh * .50,
+          height: bh * .27,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: bw * .03),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFF0AA55), Color(0xFFCF7B2E)],
+              ),
+              borderRadius: BorderRadius.circular(bh * .045),
+              border: Border.all(color: const Color(0xFF8F4A14), width: 2.5),
+              boxShadow: const [
+                BoxShadow(
+                    color: Colors.black26, blurRadius: 6, offset: Offset(0, 3)),
+              ],
+            ),
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    KonturluYazi(baslik,
+                        boyut: bh * .085,
+                        dolgu: Colors.white,
+                        kontur: koyu,
+                        kalinlik: bh * .02),
+                    KonturluYazi(alt,
+                        boyut: bh * .065,
+                        dolgu: Colors.white,
+                        kontur: koyu,
+                        kalinlik: bh * .016),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        // Çiçek süsleri
+        Positioned(
+          left: 0,
+          top: bh * .46,
+          child: Text('🌺', style: TextStyle(fontSize: bh * .09)),
+        ),
+        Positioned(
+          right: 0,
+          top: bh * .48,
+          child: Text('🌼', style: TextStyle(fontSize: bh * .09)),
+        ),
+      ],
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // ÜST ÇUBUK
+  // ------------------------------------------------------------------
+  BoxDecoration _beyazKutu(double h) => BoxDecoration(
+        color: const Color.fromRGBO(255, 255, 255, .97),
+        borderRadius: BorderRadius.circular(h * .05),
+        border: Border.all(color: const Color(0xFFB8D9FF), width: 3),
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
+        ],
+      );
+
+  Widget _isimKutusu(double w, double h) => Positioned(
+        left: w * .015,
+        top: h * .03,
+        width: w * .16,
+        height: h * .105,
+        child: Basilabilir(
+          onTap: () => _git(const ProfilSayfasi()),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: h * .012),
+            decoration: _beyazKutu(h),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: h * .085,
+                  height: h * .085,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: kMor, width: 2),
+                    ),
+                    child: const ZuzuYuzu(),
+                  ),
+                ),
+                SizedBox(width: h * .015),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      Oyuncu.instance.ad.isEmpty ? 'Misafir' : Oyuncu.instance.ad,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: h * .045,
+                        fontWeight: FontWeight.w900,
+                        color: kMavi,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  Widget _baslikTabelasi(double w, double h) => Positioned(
+        left: w * .315,
+        top: h * .035,
+        width: w * .37,
+        height: h * .25,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFFF2AE5A), Color(0xFFD4822F)],
+                  ),
+                  borderRadius: BorderRadius.circular(h * .06),
+                  border:
+                      Border.all(color: const Color(0xFFFFF1D0), width: h * .008),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Colors.black38,
+                        blurRadius: 12,
+                        offset: Offset(0, 6)),
+                  ],
+                ),
+                child: Center(
+                  child: FittedBox(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          KonturluYazi('Online',
+                              boyut: 64,
+                              dolgu: Color(0xFF1E6BFF),
+                              kontur: Colors.white,
+                              kalinlik: 10),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              KonturluYazi('Mental',
+                                  boyut: 52,
+                                  dolgu: Color(0xFFFF7A1A),
+                                  kontur: Colors.white,
+                                  kalinlik: 9),
+                              SizedBox(width: 12),
+                              KonturluYazi('Akademi',
+                                  boyut: 52,
+                                  dolgu: Color(0xFF8A2BE2),
+                                  kontur: Colors.white,
+                                  kalinlik: 9),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: -h * .03,
+              top: -h * .04,
+              child: Text('🌺', style: TextStyle(fontSize: h * .085)),
+            ),
+            Positioned(
+              right: -h * .03,
+              top: -h * .04,
+              child: Text('🌼', style: TextStyle(fontSize: h * .085)),
+            ),
+          ],
+        ),
+      );
+
+  Widget _puanKutusu(double w, double h) => Positioned(
+        left: w * .765,
+        top: h * .035,
+        width: w * .115,
+        height: h * .095,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: h * .010),
+          decoration: _beyazKutu(h),
+          child: Row(
+            children: [
+              Container(
+                width: h * .072,
+                height: h * .072,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFFD54F), Color(0xFFFF9800)],
+                  ),
+                ),
+                child:
+                    Icon(Icons.star_rounded, size: h * .052, color: Colors.white),
+              ),
+              SizedBox(width: h * .012),
+              Expanded(
+                child: ValueListenableBuilder<int>(
+                  valueListenable: Oyuncu.instance.puan,
+                  builder: (_, p, __) => FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '$p',
+                      style: TextStyle(
+                        fontSize: h * .05,
+                        fontWeight: FontWeight.w900,
+                        color: kMavi,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _yuvarlakDugme(
+          double w, double h, double sol, IconData ikon, VoidCallback onTap) =>
+      Positioned(
+        left: w * sol - h * .05,
+        top: h * .033,
+        width: h * .10,
+        height: h * .10,
+        child: Basilabilir(
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFB8D9FF), width: 3),
+              boxShadow: const [
+                BoxShadow(
+                    color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
+              ],
+            ),
+            child: Icon(ikon, size: h * .06, color: const Color(0xFF0876E8)),
+          ),
+        ),
+      );
+
+  // ------------------------------------------------------------------
+  // ALT BUTONLAR
+  // ------------------------------------------------------------------
+  Widget _altDugme(double w, double h, double sol, String ad, IconData ikon,
+          Color ikonRenk, VoidCallback onTap) =>
+      Positioned(
+        left: w * sol,
+        top: h * .855,
+        width: w * .145,
+        height: h * .105,
+        child: Basilabilir(
+          onTap: onTap,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: w * .008),
+            decoration: _beyazKutu(h),
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(ikon, size: h * .07, color: ikonRenk),
+                    SizedBox(width: w * .008),
+                    Text(
+                      ad,
+                      style: TextStyle(
+                        fontSize: h * .042,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF1247D7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 }
+
+enum _Simge { hedef, zuzu, matematik, yapboz, simsek }
 
 // ===========================================================================
 // ORTAK: TEMALI SAYFA ÇERÇEVESİ (bulanık ada manzarası + ahşap başlık + Zuzu)
