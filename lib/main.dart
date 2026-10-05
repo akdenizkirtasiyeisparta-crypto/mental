@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
+import 'oyunlar/fark_bulma_oyunu.dart';
 import 'servisler/zuzu_ses_servisi.dart';
 
 void main() async {
@@ -1015,6 +1016,45 @@ class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
 
               // --- Üst çubuk ---
               _isimKutusu(w, h, u),
+              // --- Test oyunu kısayolu ---
+              _px(
+                w,
+                h,
+                const Rect.fromLTWH(48, 172, 250, 62),
+                Basilabilir(
+                  onTap: () => _git(const FarkBulmaOyunu()),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0xFFA855F0), Color(0xFF7431B5)],
+                      ),
+                      borderRadius: BorderRadius.circular(31 * u),
+                      border: Border.all(color: Colors.white, width: 3),
+                      boxShadow: const [
+                        BoxShadow(
+                            color: Colors.black38,
+                            blurRadius: 6,
+                            offset: Offset(0, 3)),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.sports_esports_rounded,
+                            size: 34 * u, color: Colors.white),
+                        SizedBox(width: 8 * u),
+                        Text('Test Oyunu',
+                            style: TextStyle(
+                                fontSize: 30 * u,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
               _puanKutusu(w, h, u),
               _yuvarlakDugme(w, h, u, 1768, Icons.notifications_rounded,
                   () => _git(const BildirimSayfasi())),
