@@ -3,12 +3,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
-/// Hazır ses dosyası adları (assets/sesler/ içinde).
+/// Hazır ses dosyası adları (assets/audio/ içinde).
 /// Dosya varsa o çalınır; yoksa aynı metin telefonun Türkçe sesiyle okunur.
 class Ses {
-  static const hosGeldin = 'sesler/hos_geldin.mp3';
-  static const tikla = 'sesler/tikla.mp3';
-  static const odul = 'sesler/odul.mp3';
+  static const hosGeldin = 'audio/zuzuses.mp3';
+  static const tikla = 'audio/tikla.mp3';
+  static const odul = 'audio/odul.mp3';
 }
 
 /// Zuzu'nun okuduğu metinler.
